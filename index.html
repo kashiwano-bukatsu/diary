@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DAY">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@900&display=swap">
+<title>DAY</title>
+<style>
+:root{--red:#E5231B;--ink:#111;--sub:#6B6B6B;--line:#E6E6E6;--card:#F6F6F6}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#fff;color:var(--ink);font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+.num{font-family:'Inter',sans-serif;font-weight:900}
+button{font-family:inherit;cursor:pointer}
+/* オープニング */
+#open{position:fixed;inset:0;background:#000;z-index:50;overflow:hidden;transition:opacity .35s}
+#open.hide{opacity:0;pointer-events:none}
+#openDay{position:absolute;left:6.5vw;color:#fff;font-family:'Inter',sans-serif;font-weight:900;line-height:1;white-space:nowrap}
+#openNum{position:absolute;right:-4.6vw;color:var(--red);font-family:'Inter',sans-serif;font-weight:900;line-height:1;white-space:nowrap;text-align:right}
+/* 本編 */
+#app{max-width:520px;margin:0 auto;height:100%;display:flex;flex-direction:column}
+header{padding:calc(env(safe-area-inset-top) + 16px) 20px 8px;display:flex;align-items:baseline;justify-content:space-between}
+header .dn{font-size:28px;color:var(--red)}
+header .dt{font-size:13px;color:var(--sub)}
+main{flex:1;overflow-y:auto;padding:8px 20px 24px;display:flex;flex-direction:column;gap:14px}
+nav{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);background:#fff}
+nav button{border:0;background:none;height:64px;font-size:13px;color:var(--sub);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+nav button i{width:24px;height:4px;border-radius:2px;background:transparent}
+nav button.on{color:var(--red);font-weight:700}
+nav button.on i{background:var(--red)}
+.card{background:var(--card);border-radius:16px;padding:14px 18px}
+.out{border:1px solid var(--line);border-radius:16px;padding:14px 18px}
+.line2{border:2px solid var(--ink);border-radius:16px;padding:14px 18px}
+.label{font-size:12px;color:var(--sub);font-weight:700}
+.one{background:#111;color:#fff;border-radius:16px;padding:16px 18px}
+.one .label{color:#FF8A84}
+.one .t{font-size:20px;font-weight:700;margin-top:6px;line-height:1.4;word-break:break-word}
+.one input{width:100%;margin-top:8px;font-size:16px;padding:10px 12px;border-radius:10px;border:0}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.btn{border:0;border-radius:14px;background:var(--red);color:#fff;font-weight:700;font-size:16px;height:48px;padding:0 18px}
+.btn.big{height:64px;width:96px;font-size:28px;font-family:'Inter',sans-serif;font-weight:900}
+.btn.ghost{background:#fff;color:var(--red);border:2px solid var(--red);height:56px;width:100%}
+.btn.ghost.done{background:var(--red);color:#fff}
+.btn.sm{height:36px;padding:0 14px;font-size:14px;border-radius:10px}
+.btn.dark{background:#111}
+textarea,input[type=text],input[type=number],input[type=password]{width:100%;font-size:16px;font-family:inherit;border:1px solid #DDD;border-radius:10px;padding:10px 12px;background:#fff}
+textarea{min-height:120px;resize:vertical}
+.legend{display:flex;flex-direction:column;gap:8px;font-size:13px}
+.legend span.sw{display:inline-block;width:10px;height:10px;margin-right:8px}
+.list .it{padding:12px 0;border-bottom:1px solid #EEE}
+.list .hd{display:flex;gap:12px;align-items:center}
+.list .d{width:58px;font-size:15px;color:var(--red)}
+.list .tx{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list .tx.gray{color:#9A9A9A}
+.list .full{margin-top:8px;font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:12px;text-align:center}
+.tabs button{border:0;border-radius:10px;padding:10px 2px;background:#F0F0F0;color:var(--ink)}
+.tabs button.on{background:var(--red);color:#fff;font-weight:700}
+.bar{height:22px;background:#F0F0F0;border-radius:6px;margin-top:4px}
+.bar div{height:100%;border-radius:6px}
+.stage{display:flex;align-items:center;gap:12px}
+.stage .nm{flex:1;font-size:13px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{background:var(--card);border-radius:14px;padding:12px 8px;text-align:center}
+.tile .k{font-size:11px;color:var(--sub)}
+.tile .v{font-size:32px;color:var(--red);margin:4px 0}
+.tile .pm{display:flex;gap:6px;justify-content:center}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw}
+#toast.on{opacity:1}
+.sync{font-size:11px;color:var(--sub)}
+</style>
+</head>
+<body>
+<div id="open"><div id="openDay">DAY</div><div id="openNum">0</div></div>
+<div id="app" hidden>
+  <header><div class="dn num" id="hdDay">DAY 0</div><div class="dt" id="hdDate"></div></header>
+  <main id="main"></main>
+  <nav id="nav">
+    <button data-tab="today"><i></i>今日</button>
+    <button data-tab="log"><i></i>記録</button>
+    <button data-tab="num"><i></i>数字</button>
+    <button data-tab="sales"><i></i>営業</button>
+  </nav>
+</div>
+<div id="toast"></div>
+<script>
+(function(){
+'use strict';
+/* ---------- 設定 ---------- */
+var START='2026-11-17', GOAL=100000;
+var BIZ=['カシワのBUKATSU','おつなぎ屋','Perro Mouton','LINK'];
+var COLORS=['#E5231B','#111111','#8A8A8A','#D9D9D9','#B71C14','#555555'];
+var WD=['日','月','火','水','木','金','土'];
+
+/* ---------- ユーティリティ ---------- */
+var $=function(s){return document.querySelector(s)};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var pad=function(n){return String(n).padStart(2,'0')};
+var fmt=function(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+var todayStr=function(){return fmt(new Date())};
+var addDays=function(s,n){var d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return fmt(d)};
+var dayNo=function(s){return Math.round((new Date(s+'T12:00:00')-new Date(START+'T12:00:00'))/864e5)};
+var yen=function(n){return Number(n||0).toLocaleString('ja-JP')};
+var lsGet=function(k,def){try{var v=localStorage.getItem(k);return v?JSON.parse(v):def}catch(e){return def}};
+var lsSet=function(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+function toast(t){var el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(function(){el.classList.remove('on')},2400)}
+
+/* ---------- 状態 ---------- */
+var cfg=lsGet('day.cfg',null);
+var data=lsGet('day.data',null)||{total:0,records:{},sales:{},group:0,numbers:[],schedule:[]};
+var queue=lsGet('day.q',[]);
+var ui={tab:'today',biz:0,editDate:null,open:null,editOne:false,setup:false,status:''};
+var rec=function(d){return data.records[d]||(data.records[d]={})};
+var sal=function(d){return data.sales[d]||(data.sales[d]={})};
+var saveLocal=function(){lsSet('day.data',data)};
+
+/* ---------- 通信 ---------- */
+function api(action,payload){
+  var body=JSON.stringify(Object.assign({key:cfg.key,action:action},payload||{}));
+  return fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body,redirect:'follow'}).then(function(r){return r.json()});
+}
+var flushing=false;
+function flush(){
+  if(!cfg||flushing||!queue.length)return Promise.resolve();
+  flushing=true;
+  function step(){
+    if(!queue.length){flushing=false;return Promise.resolve()}
+    var q=queue[0];
+    return api(q.action,q.payload).then(function(res){
+      if(res.ok){queue.shift();lsSet('day.q',queue);return step()}
+      flushing=false;
+      if(res.error==='auth'){toast('合言葉が違います。設定を確認してください')}
+      else{toast('保存できませんでした: '+res.error)}
+    }).catch(function(){flushing=false;ui.status='送信待ち '+queue.length+'件';draw()});
+  }
+  return step();
+}
+function send(action,payload){
+  queue.push({action:action,payload:payload});lsSet('day.q',queue);
+  ui.status=cfg?'送信中…':'';draw();
+  flush().then(function(){ui.status=queue.length?'送信待ち '+queue.length+'件':'';draw()});
+}
+function load(){
+  if(!cfg)return Promise.resolve();
+  return flush().then(function(){
+    if(queue.length)return;
+    return api('init').then(function(res){
+      if(res.ok){data=res.data;saveLocal();draw()}
+      else if(res.error==='auth'){toast('合言葉が違います。設定を確認してください')}
+      else{toast('読み込めませんでした: '+res.error)}
+    });
+  }).catch(function(){toast('オフラインです。保存済みの内容を表示しています')});
+}
+
+/* ---------- 操作 ---------- */
+function tally(field,delta){
+  var d=todayStr(),s=sal(d);
+  if(field==='group'&&s.group==null)s.group=data.group||0;
+  var cur=field==='group'?s.group:(s[field]||0);
+  var nv=Math.max(cur+delta,0);
+  s[field]=nv;if(field==='group')data.group=nv;
+  saveLocal();send('tally',{date:d,field:field,delta:delta});
+}
+function setFlag(key){
+  var d=todayStr(),r=rec(d);r[key]=!r[key];saveLocal();
+  var p={date:d};p[key]=r[key];send('saveRecord',p);
+}
+function saveOne(){
+  var v=($('#oneIn')||{}).value;if(v==null)return;v=v.trim();
+  if(!v)return;
+  var d=todayStr();rec(d).one=v;ui.editOne=false;saveLocal();send('saveRecord',{date:d,one:v});
+}
+function saveNote(){
+  var d=ui.editDate||todayStr();
+  var note=$('#noteIn').value,next=$('#nextIn').value.trim();
+  if(!note.trim()&&!next){toast('何か入れてください');return}
+  var r=rec(d),was=!!r.rec,now=!!note.trim();
+  r.note=note;r.rec=now;
+  if(now&&!was)data.total=(data.total||0)+1;
+  if(!now&&was)data.total=Math.max((data.total||0)-1,0);
+  var p={date:d,note:note};
+  if(next){rec(addDays(d,1)).one=next;p.next=next}
+  saveLocal();ui.editDate=null;send('saveRecord',p);toast('保存しました');
+}
+function addNum(){
+  var amt=Number($('#amtIn').value),memo=$('#memoIn').value.trim();
+  if(!amt){toast('金額を入れてください');return}
+  var e={date:todayStr(),biz:BIZ[ui.biz],amount:amt,memo:memo};
+  data.numbers.push(e);saveLocal();send('addNumber',e);toast('追加しました');
+}
+
+/* ---------- 画面 ---------- */
+function monthSum(biz){
+  var m=todayStr().slice(0,7);
+  return (data.numbers||[]).reduce(function(a,n){return a+((n.date||'').slice(0,7)===m&&(!biz||n.biz===biz)?n.amount:0)},0);
+}
+function weekSum(f){
+  var t=todayStr(),a=0;
+  for(var i=0;i<7;i++){var s=data.sales[addDays(t,-i)];if(s)a+=s[f]||0}
+  return a;
+}
+function donut(){
+  var sc=(data.schedule||[]);var tot=sc.reduce(function(a,x){return a+x.min},0);
+  if(!tot)return '<div class="label">時間割シートに項目を入れると、ここに円グラフが出ます</div>';
+  var C=2*Math.PI*70,off=0,circ='',lg='';
+  sc.forEach(function(x,i){
+    var len=C*x.min/tot,c=COLORS[i%COLORS.length];
+    circ+='<circle cx="100" cy="100" r="70" stroke="'+c+'" stroke-dasharray="'+len.toFixed(2)+' '+C.toFixed(2)+'" stroke-dashoffset="'+(-off).toFixed(2)+'"/>';
+    off+=len;
+    lg+='<div><span class="sw" style="background:'+c+'"></span>'+esc(x.name)+'</div>';
+  });
+  return '<svg width="140" height="140" viewBox="0 0 200 200" role="img" aria-label="今日の時間割"><g transform="rotate(-90 100 100)" fill="none" stroke-width="34">'+circ+'</g></svg><div class="legend"><div style="font-weight:700">今日の時間割</div>'+lg+'</div>';
+}
+function vToday(){
+  var d=todayStr(),r=rec(d),s=sal(d);
+  var one;
+  if(r.one&&!ui.editOne){
+    one='<div class="one"><div class="label">今日の1つ</div><div class="t">'+esc(r.one)+'</div><div style="margin-top:12px;display:flex;gap:8px"><button class="btn sm '+(r.done?'':'dark')+'" style="'+(r.done?'':'background:#333')+'" data-act="done">'+(r.done?'できた ✓':'できた')+'</button><button class="btn sm" style="background:#333" data-act="editOne">書き直す</button></div></div>';
+  }else{
+    one='<div class="one"><div class="label">今日の1つ</div><div class="t" style="font-size:15px;font-weight:400;color:#ccc">今日これだけはやる、を1つ入れる</div><input id="oneIn" type="text" value="'+esc(r.one||'')+'"><div style="margin-top:10px"><button class="btn sm" data-act="saveOne">決める</button></div></div>';
+  }
+  return one+
+  '<div class="card row" style="gap:18px;justify-content:flex-start">'+donut()+'</div>'+
+  '<div class="line2 row"><div><div class="label" style="font-weight:400">今日の声かけ</div><div class="num" style="font-size:44px;line-height:1.1">'+(s.koe||0)+'<span style="font-size:16px;font-weight:700;margin-left:6px;font-family:inherit">人</span></div></div><button class="btn big" data-act="koe">+1</button></div>'+
+  '<button class="btn ghost '+(r.min?'done':'')+'" data-act="min">'+(r.min?'最低ライン 10分 できた ✓':'最低ライン 10分だけやる')+'</button>'+
+  '<div class="sync">'+esc(ui.status)+'</div>';
+}
+function vLog(){
+  var d=ui.editDate||todayStr(),r=rec(d);
+  var title=ui.editDate?(ui.editDate.slice(5).replace('-','/')+' の記録を直す'):'夜の記録';
+  var days=[];var t=todayStr();
+  for(var i=0;i<30;i++){var k=addDays(t,-i);if(dayNo(k)>=0)days.push(k)}
+  var list=days.map(function(k){
+    var x=data.records[k]||{},no=dayNo(k);
+    var line=(x.note||'').split('\n')[0];
+    var op=ui.open===k;
+    return '<div class="it"><div class="hd" data-act="open" data-d="'+k+'"><div class="d num">DAY '+no+'</div><div class="tx '+(x.rec?'':'gray')+'">'+(x.rec?esc(line):'—')+'</div></div>'+
+      (op&&x.rec?'<div class="full">'+esc(x.note)+(x.one?'\n\n今日の1つ: '+esc(x.one):'')+'</div><div style="margin-top:8px"><button class="btn sm dark" data-act="edit" data-d="'+k+'">直す</button></div>':'')+'</div>';
+  }).join('');
+  return '<div class="card"><div class="label">'+title+'</div>'+
+    '<textarea id="noteIn" style="margin-top:8px" placeholder="今日やったこと・気づいたことを、話し言葉でそのまま(キーボードのマイクでOK)">'+esc(r.note||'')+'</textarea>'+
+    '<div class="label" style="margin-top:10px">明日の1つ</div><input id="nextIn" type="text" style="margin-top:6px" placeholder="明日これだけはやる">'+
+    '<button class="btn" style="margin-top:10px;width:100%" data-act="saveNote">'+(ui.editDate?'直して保存':'今日の記録を保存')+'</button>'+(ui.editDate?'<button class="btn sm dark" style="margin-top:8px" data-act="cancelEdit">やめる</button>':'')+'</div>'+
+    '<div class="line2 row"><div class="label" style="font-weight:400;font-size:13px">記録した日の累計</div><div class="num" style="font-size:36px">'+(data.total||0)+'<span style="font-size:14px;font-weight:700;margin-left:4px;font-family:inherit">日</span></div></div>'+
+    '<div class="list"><div class="label">日ごとの一覧</div>'+list+'</div>'+
+    '<div class="sync"><button class="btn sm dark" data-act="setup">接続の設定</button> '+esc(ui.status)+'</div>';
+}
+function vNum(){
+  var tot=monthSum(),pct=Math.min(tot/GOAL,1),shown=Math.round(tot/GOAL*100);
+  var arc='M 30 130 A 100 100 0 0 1 230 130';
+  var b=BIZ[ui.biz];
+  var items=(data.numbers||[]).filter(function(n){return n.biz===b&&(n.date||'').slice(0,7)===todayStr().slice(0,7)}).slice().reverse().map(function(n){
+    return '<div class="row" style="padding:8px 0;border-bottom:1px solid #EEE;font-size:13px"><span>'+esc(n.date.slice(5).replace('-','/'))+' '+esc(n.memo||'')+'</span><span style="font-weight:700">'+yen(n.amount)+'円</span></div>';
+  }).join('');
+  return '<div class="card" style="display:flex;flex-direction:column;align-items:center"><div class="label" style="align-self:flex-start">今月の目標 月'+yen(GOAL)+'円</div>'+
+    '<svg width="260" height="150" viewBox="0 0 260 150" role="img" aria-label="達成率 '+shown+'%"><path d="'+arc+'" fill="none" stroke="#DDD" stroke-width="22"/><path d="'+arc+'" fill="none" stroke="#E5231B" stroke-width="22" stroke-dasharray="'+(pct*314.16).toFixed(1)+' 400"/><text x="130" y="118" text-anchor="middle" font-family="Inter,sans-serif" font-weight="900" font-size="40" fill="#111">'+shown+'%</text></svg>'+
+    '<div style="font-size:14px;margin-top:-4px">'+yen(tot)+'円 / '+yen(GOAL)+'円</div></div>'+
+    '<div class="tabs">'+BIZ.map(function(x,i){return '<button class="'+(i===ui.biz?'on':'')+'" data-act="biz" data-i="'+i+'">'+esc(x.replace('のBUKATSU','').replace(' Mouton',''))+'</button>'}).join('')+'</div>'+
+    '<div class="out"><div class="row"><div style="font-size:13px;font-weight:700">'+esc(b)+' 今月</div><div class="num" style="font-size:22px">'+yen(monthSum(b))+'円</div></div>'+
+    '<div style="margin-top:10px">'+(items||'<div class="label" style="font-weight:400">まだ記録がありません</div>')+'</div>'+
+    '<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px"><input id="amtIn" type="number" inputmode="numeric" placeholder="売上(円)"><input id="memoIn" type="text" placeholder="メモ(任意)"><button class="btn" data-act="addNum">追加</button></div></div>'+
+    '<div class="sync">'+esc(ui.status)+'</div>';
+}
+function vSales(){
+  var stages=[['koe','声かけ','#111'],['listen','話を聞いてもらえた','#444'],['prop','提案','#8A8A8A'],['deal','成約','#E5231B']];
+  var max=Math.max(weekSum('koe'),1),today=sal(todayStr());
+  var f=stages.map(function(x){
+    var v=weekSum(x[0]);
+    return '<div><div class="stage"><div class="nm">'+x[1]+'(今日 '+(today[x[0]]||0)+')</div><div style="font-weight:700;font-size:15px">'+v+'</div><button class="btn sm" data-act="tally" data-f="'+x[0]+'" data-dl="1">+1</button></div><div class="bar"><div style="width:'+Math.min(v/max*100,100).toFixed(0)+'%;background:'+x[2]+'"></div></div></div>';
+  }).join('');
+  function tile(label,v,f,pm){
+    return '<div class="tile"><div class="k">'+label+'</div><div class="v num">'+v+'</div><div class="pm">'+(pm?'<button class="btn sm dark" data-act="tally" data-f="'+f+'" data-dl="-1">−</button>':'')+'<button class="btn sm" data-act="tally" data-f="'+f+'" data-dl="1">+1</button></div></div>';
+  }
+  return '<div class="out" style="display:flex;flex-direction:column;gap:12px"><div style="font-size:13px;font-weight:700">営業の流れ(直近7日)</div>'+f+'</div>'+
+    '<div style="font-size:13px;font-weight:700">LINK</div>'+
+    '<div class="tiles">'+tile('面談数(7日)',weekSum('meet'),'meet',false)+tile('つないだ人数(7日)',weekSum('conn'),'conn',false)+tile('グループの人数',data.group||0,'group',true)+'</div>'+
+    '<div class="sync">'+esc(ui.status)+'</div>';
+}
+function vSetup(){
+  return '<div class="card"><div class="label">接続の設定</div>'+
+    '<div style="font-size:13px;margin:8px 0">スプシのGASを公開したときの「ウェブアプリのURL」と、GASに書いた合言葉を入れます。</div>'+
+    '<input id="urlIn" type="text" placeholder="https://script.google.com/macros/s/.../exec" value="'+esc(cfg?cfg.url:'')+'">'+
+    '<input id="keyIn" type="password" style="margin-top:8px" placeholder="合言葉" value="'+esc(cfg?cfg.key:'')+'">'+
+    '<button class="btn" style="margin-top:10px;width:100%" data-act="saveCfg">保存してつなぐ</button>'+
+    (cfg?'<button class="btn sm dark" style="margin-top:8px" data-act="closeSetup">戻る</button>':'')+'</div>';
+}
+function draw(){
+  var t=todayStr(),now=new Date();
+  $('#hdDay').textContent='DAY '+Math.max(dayNo(t),0);
+  $('#hdDate').textContent=(now.getMonth()+1)+'月'+now.getDate()+'日('+WD[now.getDay()]+')';
+  Array.prototype.forEach.call(document.querySelectorAll('nav button'),function(b){b.classList.toggle('on',b.dataset.tab===ui.tab&&!ui.setup)});
+  var keep=null;
+  var a=document.activeElement;
+  if(a&&(a.id==='noteIn'||a.id==='nextIn'||a.id==='amtIn'||a.id==='memoIn'||a.id==='oneIn'))return; // 入力中は再描画しない
+  var html=ui.setup||!cfg?vSetup():ui.tab==='today'?vToday():ui.tab==='log'?vLog():ui.tab==='num'?vNum():vSales();
+  var m=$('#main'),st=m.scrollTop;m.innerHTML=html;m.scrollTop=st;
+}
+
+/* ---------- イベント ---------- */
+document.addEventListener('click',function(e){
+  var ae=document.activeElement;
+  if(ae&&/INPUT|TEXTAREA/.test(ae.tagName)&&e.target.closest('button'))ae.blur();
+  var tb=e.target.closest('nav button');
+  if(tb){ui.tab=tb.dataset.tab;ui.setup=false;ui.editDate=null;draw();return}
+  var el=e.target.closest('[data-act]');if(!el)return;
+  var act=el.dataset.act;
+  if(act==='koe')tally('koe',1);
+  else if(act==='tally')tally(el.dataset.f,Number(el.dataset.dl));
+  else if(act==='min')setFlag('min');
+  else if(act==='done')setFlag('done');
+  else if(act==='editOne'){ui.editOne=true;draw()}
+  else if(act==='saveOne')saveOne();
+  else if(act==='saveNote')saveNote();
+  else if(act==='open'){ui.open=ui.open===el.dataset.d?null:el.dataset.d;draw()}
+  else if(act==='edit'){ui.editDate=el.dataset.d;draw();$('#main').scrollTop=0}
+  else if(act==='cancelEdit'){ui.editDate=null;draw()}
+  else if(act==='biz'){ui.biz=Number(el.dataset.i);draw()}
+  else if(act==='addNum'){addNum();$('#amtIn').value='';$('#memoIn').value=''}
+  else if(act==='setup'){ui.setup=true;draw()}
+  else if(act==='closeSetup'){ui.setup=false;draw()}
+  else if(act==='saveCfg'){
+    var u=$('#urlIn').value.trim(),k=$('#keyIn').value.trim();
+    if(!u||!k){toast('URLと合言葉を入れてください');return}
+    cfg={url:u,key:k};lsSet('day.cfg',cfg);ui.setup=false;draw();load().then(function(){toast('つながりました')});
+  }
+});
+document.addEventListener('visibilitychange',function(){if(!document.hidden)load()});
+
+/* ---------- オープニング ---------- */
+function opening(){
+  var N=Math.max(dayNo(todayStr()),0);
+  var W=window.innerWidth,H=window.innerHeight;
+  var dayEl=$('#openDay'),numEl=$('#openNum');
+  var s=String(N);
+  // 数字の大きさ: 1桁は画面幅の約1.39倍。桁が増えたら収まるように小さくする
+  var S=Math.min(W*1.39,H*0.78);
+  var unit=0.72; // 1桁の幅(em)のおおよそ
+  var avail=W*1.046-W*0.055;
+  if(s.length*unit*S>avail)S=avail/(s.length*unit);
+  numEl.style.fontSize=S+'px';
+  numEl.style.top=(H*0.74-0.864*S)+'px';
+  var fd=W*0.185;
+  dayEl.style.fontSize=fd+'px';
+  dayEl.style.top=(H*0.927-0.864*fd)+'px';
+  numEl.textContent='0';
+  var t0=0,A=100,B=1200,TOTAL=1800;
+  function frame(now){
+    var t=now-t0,k=Math.min(Math.max((t-A)/(B-A),0),1);
+    k=1-Math.pow(1-k,3);
+    numEl.textContent=String(Math.round(N*k));
+    if(t<TOTAL)requestAnimationFrame(frame);else finish();
+  }
+  var done=false;
+  function finish(){if(done)return;done=true;$('#open').classList.add('hide');$('#app').hidden=false;setTimeout(function(){$('#open').style.display='none'},400)}
+  $('#open').addEventListener('click',finish);
+  var started=false;
+  var go=function(){if(started)return;started=true;t0=performance.now();requestAnimationFrame(frame)};
+  if(document.fonts&&document.fonts.load){document.fonts.load('900 100px Inter').then(go,go);setTimeout(go,800)}else go();
+  setTimeout(finish,3500);
+}
+
+draw();
+opening();
+load();
+})();
+</script>
+</body>
+</html>
