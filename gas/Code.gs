@@ -185,5 +185,37 @@ function init_() {
     });
   }
 
-  return { today: today, total: total, records: records, sales: sales, group: latestGroup_(today), numbers: numbers, schedule: schedule };
+  const cal = cal_(today);
+  return { today: today, total: total, records: records, sales: sales, group: latestGroup_(today), numbers: numbers, schedule: schedule, calOk: cal.ok, calErr: cal.error || '', events: cal.events || [] };
+}
+
+/* ---------- Googleカレンダー(読み取りだけ) ---------- */
+/** 最初に1回、GASの画面でこの関数を実行して「許可」を出す */
+function authorizeCalendar() {
+  const n = CalendarApp.getAllCalendars().length;
+  Logger.log('カレンダー ' + n + ' 個にアクセスできます');
+}
+
+/** 今日の予定を、全部のカレンダーから集める(許可がまだなら calOk:false を返すだけで、他は動く) */
+function cal_(today) {
+  try {
+    const start = new Date(today + 'T00:00:00+09:00');
+    const end = new Date(start.getTime() + 86400000);
+    const seen = {};
+    const evs = [];
+    CalendarApp.getAllCalendars().forEach(function (c) {
+      try { if (c.isHidden()) return; } catch (e) {}
+      c.getEvents(start, end).forEach(function (ev) {
+        try { if (ev.getMyStatus() === CalendarApp.GuestStatus.NO) return; } catch (e) {}
+        const s = ev.getStartTime().getTime(), e2 = ev.getEndTime().getTime();
+        const key = ev.getTitle() + '|' + s + '|' + e2;
+        if (seen[key]) return;
+        seen[key] = true;
+        evs.push({ title: ev.getTitle(), s: s, e: e2, allDay: ev.isAllDayEvent(), cal: c.getName(), col: c.getColor() });
+      });
+    });
+    return { ok: true, events: evs };
+  } catch (err) {
+    return { ok: false, error: String(err), events: [] };
+  }
 }
