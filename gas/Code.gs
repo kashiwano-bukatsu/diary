@@ -219,3 +219,110 @@ function cal_(today) {
     return { ok: false, error: String(err), events: [] };
   }
 }
+
+/* ---------- カシワのBUKATSU「スケジュール」→ Googleカレンダー ---------- */
+const KASHIWA_SHEET_ID = '1leak2KE05r1wWz3ozGhelhBqareKHqEuhElbvDarrSg'; // 管理シート(読み取りだけ)
+const KASHIWA_CAL = 'カシワのBUKATSU';
+const KASHIWA_DAYS = 90;     // 何日先まで写すか
+const KASHIWA_HOURS = 2;     // 終了時間がシートに無いときの長さ(時間)
+
+/** 最初に1回これを実行する(今すぐ1回写して、3時間ごとの自動実行も登録する) */
+function startKashiwaSync() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'syncKashiwa') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('syncKashiwa').timeBased().everyHours(3).create();
+  syncKashiwa();
+}
+
+function kashiwaCal_() {
+  const found = CalendarApp.getCalendarsByName(KASHIWA_CAL);
+  if (found.length) return found[0];
+  const c = CalendarApp.createCalendar(KASHIWA_CAL, { timeZone: TZ });
+  c.setColor(CalendarApp.Color.RED);
+  return c;
+}
+
+function pad2_(n) { return ('0' + n).slice(-2); }
+
+/** セルの日付 → 'yyyy-MM-dd'(Date でも「2026/11/20」のような文字でも読む) */
+function kDate_(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, TZ, 'yyyy-MM-dd');
+  const m = String(v).normalize('NFKC').match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+  return m ? m[1] + '-' + pad2_(m[2]) + '-' + pad2_(m[3]) : '';
+}
+
+/** セルの時間 → [開始 'HH:mm', 終了 'HH:mm' or ''](時刻でも「19:00」「19:00-21:00」でも読む) */
+function kTimes_(v) {
+  if (v instanceof Date) return [Utilities.formatDate(v, TZ, 'HH:mm'), ''];
+  const m = String(v).normalize('NFKC').match(/\d{1,2}:\d{2}/g);
+  if (!m) return ['', ''];
+  const f = function (x) { const p = x.split(':'); return pad2_(p[0]) + ':' + p[1]; };
+  return [f(m[0]), m[1] ? f(m[1]) : ''];
+}
+
+/** シートを読んで、カレンダーを合わせる(足りない予定は作る・変わった予定は直す・消えた予定は消す) */
+function syncKashiwa() {
+  const src = SpreadsheetApp.openById(KASHIWA_SHEET_ID).getSheetByName('スケジュール');
+  if (!src) throw new Error('「スケジュール」シートが見つかりません');
+  const vals = src.getDataRange().getValues();
+  const head = vals[0].map(function (h) { return String(h).trim(); });
+  const col = function (n) { return head.indexOf(n); };
+  const cD = col('開催日'), cT = col('開始時間'), cP = col('場所'), cWho = col('予約者名'),
+        cK = col('開催種目'), cC = col('コート'), cM = col('メモ'), cN = col('備考');
+  if (cD < 0) throw new Error('「開催日」の列が見つかりません');
+
+  const today = today_();
+  const last = addDays_(today, KASHIWA_DAYS);
+  const want = {};
+  let skipped = 0;
+  for (let i = 1; i < vals.length; i++) {
+    const r = vals[i];
+    const d = kDate_(r[cD]);
+    if (!d) { if (String(r[cD]).trim()) skipped++; continue; }
+    if (d < today || d > last) continue;
+    const t = cT >= 0 ? kTimes_(r[cT]) : ['', ''];
+    const kind = cK >= 0 ? String(r[cK]).trim() : '';
+    const place = cP >= 0 ? String(r[cP]).trim() : '';
+    const title = (kind || 'BUKATSU') + (place ? ' @' + place : '');
+    const desc = [
+      cC >= 0 && r[cC] !== '' ? 'コート: ' + r[cC] : '',
+      cWho >= 0 && r[cWho] !== '' ? '予約者: ' + r[cWho] : '',
+      cM >= 0 && r[cM] !== '' ? 'メモ: ' + r[cM] : '',
+      cN >= 0 && r[cN] !== '' ? '備考: ' + r[cN] : '',
+      '(管理シート「スケジュール」から自動で反映。直すときはシート側を直してください)'
+    ].filter(String).join('\n');
+    let s, e, allDay = false;
+    if (t[0]) {
+      s = new Date(d + 'T' + t[0] + ':00+09:00');
+      e = t[1] ? new Date(d + 'T' + t[1] + ':00+09:00') : new Date(s.getTime() + KASHIWA_HOURS * 3600000);
+      if (e <= s) e = new Date(s.getTime() + KASHIWA_HOURS * 3600000);
+    } else {
+      s = new Date(d + 'T00:00:00+09:00'); allDay = true;
+    }
+    want[title + '|' + s.getTime()] = { title: title, s: s, e: e, allDay: allDay, desc: desc, d: d };
+  }
+
+  const cal = kashiwaCal_();
+  const from = new Date(today + 'T00:00:00+09:00');
+  const to = new Date(noon_(last) + 86400000);
+  let made = 0, fixed = 0, removed = 0;
+  const have = {};
+  cal.getEvents(from, to).forEach(function (ev) {
+    const key = ev.getTitle() + '|' + ev.getStartTime().getTime();
+    const w = want[key];
+    if (!w || have[key]) { ev.deleteEvent(); removed++; return; }
+    have[key] = true;
+    if (ev.getDescription() !== w.desc) { ev.setDescription(w.desc); fixed++; }
+    if (!w.allDay && ev.getEndTime().getTime() !== w.e.getTime()) { ev.setTime(w.s, w.e); fixed++; }
+  });
+  Object.keys(want).forEach(function (k) {
+    if (have[k]) return;
+    const w = want[k];
+    if (w.allDay) cal.createAllDayEvent(w.title, w.s, { description: w.desc });
+    else cal.createEvent(w.title, w.s, w.e, { description: w.desc });
+    made++;
+    Utilities.sleep(150);
+  });
+  Logger.log('カシワの予定: 追加 ' + made + ' / 直した ' + fixed + ' / 消した ' + removed + ' / 日付が読めない行 ' + skipped);
+}
