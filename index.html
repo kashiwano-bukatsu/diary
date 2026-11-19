@@ -92,7 +92,7 @@ textarea{min-height:120px;resize:vertical}
 'use strict';
 /* ---------- 設定 ---------- */
 var START='2026-11-17', GOAL=100000;
-var GAS_URL='https://script.google.com/a/macros/minnanobukatsu.com/s/AKfycbwUEGHPeLe4pHRutIJyZph4V4kzxVcjQla7-Kv_ZMHo9h6EDmxKWUIR7BXrS4aHgWG1Ew/exec'; // URLだけなら公開しても、合言葉がないと何も読めない
+var GAS_URL='https://script.google.com/a/macros/minnanobukatsu.com/s/AKfycbwUEGHPeLe4pHRutIJyZph4V4kzxVcjQla7-Kv_ZMHo9h6EDmxKWUIR7BXrS4aHgWG1Ew/exec'; // URLだけなら公開しても、ログインできないと何も読めない
 var BIZ=['カシワのBUKATSU','おつなぎ屋','Perro Mouton','LINK'];
 var COLORS=['#E5231B','#111111','#8A8A8A','#D9D9D9','#B71C14','#555555'];
 var WD=['日','月','火','水','木','金','土'];
@@ -135,7 +135,7 @@ function flush(){
     return api(q.action,q.payload).then(function(res){
       if(res.ok){queue.shift();lsSet('day.q',queue);return step()}
       flushing=false;
-      if(res.error==='auth'){toast('合言葉が違います。設定を確認してください')}
+      if(res.error==='auth'){toast('名前か生年月日が違います。ログインし直してください')}
       else{toast('保存できませんでした: '+res.error)}
     }).catch(function(){flushing=false;ui.status='送信待ち '+queue.length+'件';draw()});
   }
@@ -152,7 +152,7 @@ function load(){
     if(queue.length)return;
     return api('init').then(function(res){
       if(res.ok){data=res.data;saveLocal();draw()}
-      else if(res.error==='auth'){toast('合言葉が違います。設定を確認してください')}
+      else if(res.error==='auth'){toast('名前か生年月日が違います。ログインし直してください')}
       else{toast('読み込めませんでした: '+res.error)}
     });
   }).catch(function(){toast('オフラインです。保存済みの内容を表示しています')});
@@ -283,12 +283,13 @@ function vSales(){
     '<div class="sync">'+esc(ui.status)+'</div>';
 }
 function vSetup(){
-  return '<div class="card"><div class="label">はじめの設定(この端末で1回だけ)</div>'+
-    '<div style="font-size:13px;margin:8px 0">GASに書いた「合言葉」を入れてください。</div>'+
+  return '<form id="loginForm" class="card" onsubmit="return false"><div class="label">ログイン(この端末で1回だけ)</div>'+
+    '<div style="font-size:13px;margin:8px 0">名前と生年月日(8桁)を入れてください。</div>'+
     (GAS_URL?'':'<input id="urlIn" type="text" placeholder="https://script.google.com/macros/s/.../exec" value="'+esc(cfg?cfg.url:'')+'" style="margin-bottom:8px">')+
-    '<input id="keyIn" type="password" placeholder="合言葉" value="'+esc(cfg?cfg.key:'')+'">'+
-    '<button class="btn" style="margin-top:10px;width:100%" data-act="saveCfg">保存してつなぐ</button>'+
-    (cfg?'<button class="btn sm dark" style="margin-top:8px" data-act="closeSetup">戻る</button>':'')+'</div>';
+    '<input id="nameIn" name="username" autocomplete="username" type="text" placeholder="名前(カタカナ)">'+
+    '<input id="birthIn" name="password" autocomplete="current-password" type="password" inputmode="numeric" style="margin-top:8px" placeholder="生年月日 8桁">'+
+    '<button class="btn" type="submit" style="margin-top:10px;width:100%" data-act="saveCfg">ログイン</button>'+
+    (cfg?'<button class="btn sm dark" type="button" style="margin-top:8px" data-act="closeSetup">戻る</button>':'')+'</form>';
 }
 function draw(){
   var t=todayStr(),now=new Date();
@@ -325,8 +326,10 @@ document.addEventListener('click',function(e){
   else if(act==='setup'){ui.setup=true;draw()}
   else if(act==='closeSetup'){ui.setup=false;draw()}
   else if(act==='saveCfg'){
-    var u=GAS_URL||($('#urlIn')?$('#urlIn').value.trim():''),k=$('#keyIn').value.trim();
-    if(!u||!k){toast('合言葉を入れてください');return}
+    var u=GAS_URL||($('#urlIn')?$('#urlIn').value.trim():'');
+    var nm=$('#nameIn').value.normalize('NFKC').trim(),bd=$('#birthIn').value.normalize('NFKC').trim();
+    if(!u||!nm||!bd){toast('名前と生年月日を入れてください');return}
+    var k=nm+'|'+bd;
     cfg={url:u,key:k};lsSet('day.cfg',cfg);ui.setup=false;draw();load().then(function(){toast('つながりました')});
   }
 });
